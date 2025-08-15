@@ -1,8 +1,7 @@
-li a {
-    color: rgb(255, 0, 106);
+.chart{
+    width: 100%;
+    min-height: 400px;
 }
-
-
 .admin-button {
     display: inline-block;
     background-color: #4e73df;
@@ -36,8 +35,4 @@ li a {
 .button-container {
     margin-top: 20px;
     padding: 10px;
-}
-.chart{
-    width: 100%;
-    min-height: 400px;
 }
