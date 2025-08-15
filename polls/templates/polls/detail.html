@@ -9,6 +9,9 @@
 
 <body>
     <form action="{% url 'polls:vote' question.id %}" method="post">
+        <div class="button-container">
+            <a href="{% url 'index' %}" class="admin-button">Volver a la lista de preguntas</a>
+        </div>
         {% csrf_token %}
         <fieldset>
             <legend>

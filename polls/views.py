@@ -73,22 +73,54 @@ def index(request):
 
 
 def get_chart(request):
-    latest_question_list = Question.objects.all()
-    preguntas = [question.question_text for question in latest_question_list]
+    questions = Question.objects.all()
+    charts_data = {}
+    
+    for question in questions:
+        choices = question.choice_set.all()
+        
+        
+        chart_data = {
+            'question_text': question.question_text,
+            'question_id': question.id,
+            'categories': [],
+            'values': []
+        }
+        
+        # Obtener las opciones y los votos
+        for choice in choices:
+            chart_data['categories'].append(choice.choice_text)
+            chart_data['values'].append(choice.votes)
+        
+        # Configuración del gráfico para esta pregunta
+        option = {
+            'title': {
+                'text': question.question_text
+            },
+            'tooltip': {
+                'trigger': 'axis',
+                'formatter': '{b}: {c} votos'
+            },
+            'xAxis': {
+                'type': 'category',
+                'data': chart_data['categories']
+            },
+            'yAxis': {
+                'type': 'value',
+                'name': 'Votos'
+            },
+            'series': [{
+                'data': chart_data['values'],
+                'type': 'bar',
+                'showBackground': True,
+                'itemStyle': {
+                    'color': '#6b48ff'
+                }
+            }]
+        }
+        
+        charts_data[question.id] = option
+    
+    return JsonResponse(charts_data)
 
-    chart = {
-        'xAxis': {
-            'type': 'category',
-            'data': [1, 2, 3, 4]
-        },
-        'yAxis': {
-            'type': 'value'
-        },
-        'series': [
-            {
-                'data': [1,2,3],
-                'type': 'bar'
-            }
-        ]
-    };
-    return JsonResponse(chart) 
+

@@ -1,7 +1,42 @@
-.chart{
+.chart {
     width: 100%;
     min-height: 400px;
+    height: 400px;  
+    margin-bottom: 20px;
+    position: relative; 
 }
+body {
+    background-color: aquamarine !important;
+}
+.card {
+    margin-bottom: 30px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    border: none;
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    padding: 15px;
+    font-size: 1.2rem;
+}
+li{
+    list-style-type: none;
+    padding: 0;
+}
+a{
+    color: black !important;
+}
+
+.card-body {
+    padding: 20px;
+}
+
+#charts-container {
+    margin-top: 30px;
+    margin-bottom: 50px;
+}
+
+/* Estilos existentes que mantenemos */
 .admin-button {
     display: inline-block;
     background-color: #4e73df;
