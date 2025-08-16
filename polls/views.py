@@ -79,7 +79,7 @@ def get_chart(request):
     for question in questions:
         choices = question.choice_set.all()
         
-        
+        # Datos para esta pregunta específica
         chart_data = {
             'question_text': question.question_text,
             'question_id': question.id,
