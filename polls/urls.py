@@ -10,4 +10,7 @@ urlpatterns = [
     path("<int:question_id>/vote/", views.vote, name="vote"),
     path("register/", views.user_registration, name="user_registration"),
     path("login/", views.user_login, name="login"),
+    path("logout/", views.user_logout, name="logout"),
+    path('', views.index, name='index'),
+    path('vencidas/', views.VencidasView.as_view(), name='vencidas'),
 ]

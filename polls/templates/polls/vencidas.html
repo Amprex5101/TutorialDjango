@@ -5,9 +5,9 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h2 class="mb-4">Últimas 5 preguntas publicadas</h2>
+    <h2 class="mb-4">Encuestas Vencidas</h2>
     <div id="charts-container">
-        {% for question in latest_question_list %}
+        {% for question in vencidas_list %}
         <div class="card mb-4">
             <div class="card-header">
                 <strong><a href="{% url 'polls:detail' question.id %}">{{ question.question_text }}</a></strong>

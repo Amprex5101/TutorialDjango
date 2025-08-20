@@ -1,15 +1,16 @@
-from django.shortcuts import redirect, render
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import redirect, render, get_object_or_404
+from django.contrib.auth import login, authenticate, logout
+from django.contrib import messages
 from django.utils import timezone
 from django.views import generic
 from django.db.models import F, Sum
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.urls import reverse
-from .models import Choice, Question
-from django.http import JsonResponse
+from .models import Choice, Question, PerfilUsuario, Vote
 from random import randrange
-from .forms import UsuarioForm, UsuarioLoginForm
-
+from .forms import UsuarioRegistroForm, UsuarioLoginForm
+from django.db import IntegrityError
+import datetime
 class IndexView(generic.ListView):
     template_name = "polls/index.html"
     context_object_name = "latest_question_list"
@@ -26,16 +27,29 @@ class IndexView(generic.ListView):
             :5
         ]
 
-
 class DetailView(generic.DetailView):
     model = Question
     template_name = "polls/detail.html"
-
-    def get_queryset(self):
-        """
-        Excludes any questions that aren't published yet.
-        """
-        return Question.objects.filter(pub_date__lte=timezone.now())
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        if self.request.user.is_authenticated:
+            question = self.object
+            try:
+                voto = Vote.objects.get(usuario=self.request.user, pregunta=question)
+                context['ya_voto'] = True
+                context['opcion_seleccionada'] = voto.opcion  # La opción que seleccionó
+                context['fecha_voto'] = voto.fecha_voto  # Cuándo votó
+            except Vote.DoesNotExist:
+                context['ya_voto'] = False
+                context['opcion_seleccionada'] = None
+        else:
+            # Si el usuario no está autenticado
+            context['ya_voto'] = False
+            context['opcion_seleccionada'] = None
+        
+        return context
 
 
 class ResultsView(generic.DetailView):
@@ -43,27 +57,66 @@ class ResultsView(generic.DetailView):
     template_name = "polls/results.html"
 
 
+class VencidasView(generic.ListView):
+    template_name = "polls/vencidas.html"
+    context_object_name = "vencidas_list"
+
+    def get_queryset(self):
+        """Return the questions that are older than a week."""
+        una_semana_atras = timezone.now() - datetime.timedelta(days=7)
+        return Question.objects.filter(pub_date__lt=una_semana_atras).order_by("-pub_date")
+
+
 def vote(request, question_id):
+    # Verificar si el usuario está autenticado
+    if not request.user.is_authenticated:
+        messages.error(request, "Debes iniciar sesión para votar.")
+        return redirect('polls:login')
+        
     question = get_object_or_404(Question, pk=question_id)
+    
     try:
-        selected_choice = question.choice_set.get(pk=request.POST["choice"])
+        selected_choice = question.choice_set.get(pk=request.POST['choice'])
     except (KeyError, Choice.DoesNotExist):
-        # Redisplay the question voting form.
+        # Mostrar de nuevo el formulario de votación
         return render(
             request,
             "polls/detail.html",
             {
                 "question": question,
-                "error_message": "You didn't select a choice.",
+                "error_message": "No seleccionaste una opción.",
             },
         )
-    else:
-        selected_choice.votes = F("votes") + 1
+    
+    try:
+        # Intentar registrar el voto del usuario
+        vote = Vote(
+            usuario=request.user,
+            pregunta=question,
+            opcion=selected_choice
+        )
+        vote.save()
+        
+        # Incrementar el contador de votos
+        selected_choice.votes += 1
         selected_choice.save()
-        # Always return an HttpResponseRedirect after successfully dealing
-        # with POST data. This prevents data from being posted twice if a
-        # user hits the Back button.
-        return HttpResponseRedirect(reverse("polls:results", args=(question.id,)))
+        
+        messages.success(request, "¡Tu voto ha sido registrado!")
+        
+    except IntegrityError:
+        # Si el usuario ya votó en esta pregunta
+        messages.error(request, "Ya has votado en esta encuesta.")
+        return render(
+            request,
+            "polls/detail.html",
+            {
+                "question": question,
+                "error_message": "Ya has votado en esta encuesta anteriormente.",
+            },
+        )
+        
+    # Siempre redireccionar después de un POST exitoso
+    return HttpResponseRedirect(reverse("polls:results", args=(question.id,)))
     
 
 def index(request):
@@ -126,27 +179,39 @@ def get_chart(request):
 
 def user_registration(request):
     if request.method == "POST":
-        form = UsuarioForm(request.POST)
+        form = UsuarioRegistroForm(request.POST)
         if form.is_valid():
-            form.save()
-            return redirect("index")
+            user = form.save()
+            login(request, user)
+            messages.success(request, "Registro exitoso.")
+            return redirect("polls:index")
+        messages.error(request, "Registro fallido. Información inválida.")
     else:
-        form = UsuarioForm()
+        form = UsuarioRegistroForm()
     return render(request, "polls/register.html", {"form": form})
 
 def user_login(request):
     if request.method == "POST":
-        form = UsuarioLoginForm(request.POST)
+        form = UsuarioLoginForm(request, data=request.POST)
         if form.is_valid():
-            email = form.cleaned_data["email"]
-            # Cambiar a mayúscula para coincidir con el modelo
-            contrasena = form.cleaned_data["Contrasena"]
-            try:
-                usuario = Usuario.objects.get(Email=email, Contrasena=contrasena)
-                # Iniciar sesión
-                return redirect("index")
-            except Usuario.DoesNotExist:
-                form.add_error(None, "Credenciales inválidas")
+            username = form.cleaned_data.get('username')
+            password = form.cleaned_data.get('password')
+            user = authenticate(username=username, password=password)
+            if user is not None:
+                login(request, user)
+                messages.info(request, f"Has iniciado sesión como {username}.")
+                return redirect("polls:index")
+            else:
+                messages.error(request, "Usuario o contraseña inválidos.")
+        else:
+            messages.error(request, "Usuario o contraseña inválidos.")
     else:
         form = UsuarioLoginForm()
     return render(request, "polls/login.html", {"form": form})
+
+
+
+def user_logout(request):
+    logout(request)
+    messages.info(request, "Has cerrado sesión exitosamente.")
+    return redirect("polls:index")

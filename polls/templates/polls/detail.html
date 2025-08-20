@@ -1,30 +1,57 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "polls/base.html" %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
+{% block title %}Detalle de Encuesta{% endblock %}
 
-<body>
-    <form action="{% url 'polls:vote' question.id %}" method="post">
-        <div class="button-container">
-            <a href="{% url 'index' %}" class="admin-button">Volver a la lista de preguntas</a>
-        </div>
-        {% csrf_token %}
-        <fieldset>
-            <legend>
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card">
+            {% if user.is_authenticated and ya_voto == false %}
+            <div class="card-header">
                 <h1>{{ question.question_text }}</h1>
-            </legend>
-            {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
-            {% for choice in question.choice_set.all %}
-            <input type="radio" name="choice" id="choice{{ forloop.counter }}" value="{{ choice.id }}">
-            <label for="choice{{ forloop.counter }}">{{ choice.choice_text }}</label><br>
-            {% endfor %}
-        </fieldset>
-        <input type="submit" value="Vote">
-    </form>
-</body>
-
-</html>
+            </div>
+            {% endif %}
+            <div class="card-body">
+                {% if error_message %}
+                <div class="alert alert-danger">
+                    <strong>{{ error_message }}</strong>
+                </div>
+                {% endif %}
+                
+                {% if user.is_authenticated %}
+                    {% if ya_voto %}
+                        <div class="alert alert-info">
+                            Ya has votado en esta encuesta. Tu elección fue: 
+                            <strong>{{ opcion_seleccionada.choice_text }}</strong>
+                            <small class="d-block mt-1">
+                                Votaste el {{ fecha_voto|date:"d/m/Y" }} a las {{ fecha_voto|time:"H:i" }}
+                            </small>
+                        </div>
+                        <a href="{% url 'polls:results' question.id %}" class="btn btn-primary">Ver resultados</a>
+                    {% else %}
+                        <form action="{% url 'polls:vote' question.id %}" method="post">
+                            {% csrf_token %}
+                            <fieldset>
+                                {% for choice in question.choice_set.all %}
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" name="choice" 
+                                        id="choice{{ forloop.counter }}" value="{{ choice.id }}">
+                                    <label class="form-check-label" for="choice{{ forloop.counter }}">
+                                        {{ choice.choice_text }}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </fieldset>
+                            <button type="submit" class="btn btn-primary mt-3">Votar</button>
+                        </form>
+                    {% endif %}
+                {% else %}
+                    <div class="alert alert-warning">
+                        Debes <a href="{% url 'polls:login' %}">iniciar sesión</a> para poder votar.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

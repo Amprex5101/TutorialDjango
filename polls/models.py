@@ -2,11 +2,12 @@ from django.db import models
 import datetime
 from django.utils import timezone
 from django.contrib import admin
+from django.contrib.auth.models import User
 
 class Question(models.Model):
     question_text = models.CharField(max_length=200)
     pub_date = models.DateTimeField("date published")
-
+    end_date = models.DateTimeField("end date", null=True, blank=True)  # Agregar este campo
     def __str__(self):
         return self.question_text
     
@@ -29,10 +30,25 @@ class Choice(models.Model):
         return self.choice_text
 
 
-class Usuario(models.Model):
-    Nombre = models.CharField(max_length=200)
-    Email = models.EmailField()
-    Contrasena = models.CharField(max_length=200)
+class Vote(models.Model):
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE)
+    pregunta = models.ForeignKey(Question, on_delete=models.CASCADE)
+    opcion = models.ForeignKey(Choice, on_delete=models.CASCADE)
+    fecha_voto = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        # Asegurar que un usuario solo pueda votar una vez por pregunta
+        unique_together = ('usuario', 'pregunta')
+        verbose_name = 'Voto'
+        verbose_name_plural = 'Votos'
     
     def __str__(self):
-        return self.Nombre
+        return f"{self.usuario.username} votó por '{self.opcion.choice_text}' en '{self.pregunta.question_text}'"
+
+
+class PerfilUsuario(models.Model):
+    usuario = models.OneToOneField(User, on_delete=models.CASCADE)
+    # Campos adicionales que quieras agregar al usuario
+    
+    def __str__(self):
+        return self.usuario.username

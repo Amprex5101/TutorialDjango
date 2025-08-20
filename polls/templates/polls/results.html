@@ -1,25 +1,26 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "polls/base.html" %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
+{% block title %}Resultados de la Encuesta{% endblock %}
 
-<body>
-    <div class="button-container">
-            <a href="{% url 'index' %}" class="admin-button">Volver a la lista de preguntas</a>
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card">
+            <div class="card-header">
+                <h1>{{ question.question_text }}</h1>
+            </div>
+            <div class="card-body">
+                <ul class="list-group">
+                    {% for choice in question.choice_set.all %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ choice.choice_text }}
+                        <span class="badge bg-primary rounded-pill">{{ choice.votes }} voto{{ choice.votes|pluralize }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                <a href="{% url 'polls:index' %}" class="btn btn-secondary mt-3">Volver a la lista de encuestas</a>
+            </div>
+        </div>
     </div>
-    <h1>{{ question.question_text }}</h1>
-
-    <ul>
-        {% for choice in question.choice_set.all %}
-        <li>{{ choice.choice_text }} -- {{ choice.votes }} vote{{ choice.votes|pluralize }}</li>
-        {% endfor %}
-    </ul>
-
-    <a href="{% url 'polls:detail' question.id %}">Vote again?</a>
-</body>
-
-</html>
+</div>
+{% endblock %}
