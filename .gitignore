@@ -1,0 +1,12 @@
+#Archivos de entorno, llaves secretas
+.env
+
+#Entorno virtual
+git/
+venv/
+env/
+ENV/
+
+polls/__pycache__/
+mysite/__pycache__/
+polls/migrations/
