@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from django.views import generic
@@ -8,7 +8,7 @@ from django.urls import reverse
 from .models import Choice, Question
 from django.http import JsonResponse
 from random import randrange
-
+from .forms import UsuarioForm, UsuarioLoginForm
 
 class IndexView(generic.ListView):
     template_name = "polls/index.html"
@@ -124,3 +124,29 @@ def get_chart(request):
     return JsonResponse(charts_data)
 
 
+def user_registration(request):
+    if request.method == "POST":
+        form = UsuarioForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect("index")
+    else:
+        form = UsuarioForm()
+    return render(request, "polls/register.html", {"form": form})
+
+def user_login(request):
+    if request.method == "POST":
+        form = UsuarioLoginForm(request.POST)
+        if form.is_valid():
+            email = form.cleaned_data["email"]
+            # Cambiar a mayúscula para coincidir con el modelo
+            contrasena = form.cleaned_data["Contrasena"]
+            try:
+                usuario = Usuario.objects.get(Email=email, Contrasena=contrasena)
+                # Iniciar sesión
+                return redirect("index")
+            except Usuario.DoesNotExist:
+                form.add_error(None, "Credenciales inválidas")
+    else:
+        form = UsuarioLoginForm()
+    return render(request, "polls/login.html", {"form": form})

@@ -28,3 +28,11 @@ class Choice(models.Model):
     def __str__(self):
         return self.choice_text
 
+
+class Usuario(models.Model):
+    Nombre = models.CharField(max_length=200)
+    Email = models.EmailField()
+    Contrasena = models.CharField(max_length=200)
+    
+    def __str__(self):
+        return self.Nombre
