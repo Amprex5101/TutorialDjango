@@ -6,23 +6,26 @@ from django.views import generic
 from django.db.models import F, Sum
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.urls import reverse
-from .models import Choice, Question, PerfilUsuario, Vote
+from .models import Choice, Question, Vote
 from random import randrange
 from .forms import UsuarioRegistroForm, UsuarioLoginForm
 from django.db import IntegrityError
 import datetime
+from django.db import models 
+
+
 class IndexView(generic.ListView):
     template_name = "polls/index.html"
     context_object_name = "latest_question_list"
 
     def get_queryset(self):
-        """Return the last five published questions."""
-        return Question.objects.order_by("-pub_date")[:5]
+        """Return the active questions (published and not ended)."""
+        now = timezone.now()
+        return Question.objects.filter(
+            models.Q(pub_date__lte=now) & 
+            (models.Q(end_date__gt=now) | models.Q(end_date=None))
+        ).order_by("-pub_date")[:5]
     def get_queryset(self):
-        """
-        Return the last five published questions (not including those set to be
-        published in the future).
-        """
         return Question.objects.filter(pub_date__lte=timezone.now()).order_by("-pub_date")[
             :5
         ]
@@ -33,19 +36,23 @@ class DetailView(generic.DetailView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        question = self.object
+        
+        # Verificar si la encuesta está activa
+        now = timezone.now()
+        is_active = now >= question.pub_date and (question.end_date is None or now <= question.end_date)
+        context['is_active'] = is_active
         
         if self.request.user.is_authenticated:
-            question = self.object
             try:
                 voto = Vote.objects.get(usuario=self.request.user, pregunta=question)
                 context['ya_voto'] = True
-                context['opcion_seleccionada'] = voto.opcion  # La opción que seleccionó
-                context['fecha_voto'] = voto.fecha_voto  # Cuándo votó
+                context['opcion_seleccionada'] = voto.opcion
+                context['fecha_voto'] = voto.fecha_voto
             except Vote.DoesNotExist:
                 context['ya_voto'] = False
                 context['opcion_seleccionada'] = None
         else:
-            # Si el usuario no está autenticado
             context['ya_voto'] = False
             context['opcion_seleccionada'] = None
         
@@ -62,21 +69,41 @@ class VencidasView(generic.ListView):
     context_object_name = "vencidas_list"
 
     def get_queryset(self):
-        """Return the questions that are older than a week."""
-        una_semana_atras = timezone.now() - datetime.timedelta(days=7)
-        return Question.objects.filter(pub_date__lt=una_semana_atras).order_by("-pub_date")
+        """Return questions that have ended."""
+        now = timezone.now()
+        return Question.objects.filter(
+            models.Q(end_date__lt=now) & models.Q(pub_date__lte=now)
+        ).order_by("-end_date")
 
 
 def vote(request, question_id):
-    # Verificar si el usuario está autenticado
     if not request.user.is_authenticated:
         messages.error(request, "Debes iniciar sesión para votar.")
         return redirect('polls:login')
         
     question = get_object_or_404(Question, pk=question_id)
     
+    # Verificar si la encuesta está activa
+    # Calcula si la encuesta está activa con respecto a la fecha de publicacion y la de
+    # finalización
+    now = timezone.now()
+    is_active = now >= question.pub_date and (question.end_date is None or now <= question.end_date)
+    #Si no esta activa en la vista detail.html aparecera un mensaje de error.
+    if not is_active:
+        messages.error(request, "Esta encuesta ya no está disponible para votar.")
+        return render(
+            request,
+            "polls/detail.html",
+            {
+                "question": question,
+                "error_message": "Esta encuesta ya no está disponible para votar.",
+                "is_active": False
+            },
+        )
+    #Si esta activa muestra el formulario con las respuestas de la encuesta
     try:
         selected_choice = question.choice_set.get(pk=request.POST['choice'])
+    #Si no se selecciona nada redirigue a la misma pagina mostrando un mensaje de error
     except (KeyError, Choice.DoesNotExist):
         # Mostrar de nuevo el formulario de votación
         return render(
@@ -87,7 +114,7 @@ def vote(request, question_id):
                 "error_message": "No seleccionaste una opción.",
             },
         )
-    
+    #Si sí se selecciono se guardara el voto del usuario en la BD
     try:
         # Intentar registrar el voto del usuario
         vote = Vote(
@@ -102,7 +129,7 @@ def vote(request, question_id):
         selected_choice.save()
         
         messages.success(request, "¡Tu voto ha sido registrado!")
-        
+    #Si el usuario ya voto mostrara un mensaje de error
     except IntegrityError:
         # Si el usuario ya votó en esta pregunta
         messages.error(request, "Ya has votado en esta encuesta.")
@@ -120,8 +147,14 @@ def vote(request, question_id):
     
 
 def index(request):
-    latest_question_list = Question.objects.order_by("-pub_date")[:5]
-    context = {"latest_question_list": latest_question_list}
+    now = timezone.now()
+    # Filtrar para obtener solo encuestas activas
+    active_questions = Question.objects.filter(
+        models.Q(pub_date__lte=now) & 
+        (models.Q(end_date__gt=now) | models.Q(end_date=None))
+    ).order_by("-pub_date")[:5]
+    
+    context = {"latest_question_list": active_questions}
     return render(request, "polls/index.html", context)
 
 

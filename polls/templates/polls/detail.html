@@ -15,6 +15,18 @@
                 {% if error_message %}
                 <div class="alert alert-danger">
                     <strong>{{ error_message }}</strong>
+                </div> 
+                
+                {% endif %}
+                
+                {% if not is_active %}
+                <div class="alert alert-warning">
+                    Esta encuesta ya no está disponible para votar.
+                    {% if question.end_date %}
+                    <small class="d-block mt-1">
+                        Finalizó el {{ question.end_date|date:"d/m/Y" }} a las {{ question.end_date|time:"H:i" }}
+                    </small>
+                    {% endif %}
                 </div>
                 {% endif %}
                 
@@ -28,7 +40,7 @@
                             </small>
                         </div>
                         <a href="{% url 'polls:results' question.id %}" class="btn btn-primary">Ver resultados</a>
-                    {% else %}
+                    {% elif is_active %}
                         <form action="{% url 'polls:vote' question.id %}" method="post">
                             {% csrf_token %}
                             <fieldset>
@@ -46,9 +58,11 @@
                         </form>
                     {% endif %}
                 {% else %}
-                    <div class="alert alert-warning">
-                        Debes <a href="{% url 'polls:login' %}">iniciar sesión</a> para poder votar.
-                    </div>
+                    {% if is_active %}
+                        <div class="alert alert-warning">
+                            Debes <a href="{% url 'polls:login' %}">iniciar sesión</a> para poder votar.
+                        </div>
+                    {% endif %}                    
                 {% endif %}
             </div>
         </div>

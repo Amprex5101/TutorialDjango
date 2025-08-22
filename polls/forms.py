@@ -8,14 +8,12 @@ class UsuarioRegistroForm(UserCreationForm):
     class Meta:
         model = User
         fields = ('username', 'email', 'password1', 'password2')
-        # Personalizar o eliminar los textos de ayuda
         help_texts = {
-            'username': '',  # Eliminar el mensaje de ayuda completamente
-            'email': 'Introduce un email válido',  # Personalizar el mensaje
-            'password1': '',  # Eliminar mensaje de requisitos de contraseña
-            'password2': '',  # Eliminar mensaje de confirmación
+            'username': '',
+            'email': 'Introduce un email válido',
+            'password1': '',
+            'password2': '',
         }
-        # También puedes personalizar las etiquetas
         labels = {
             'username': 'Nombre de usuario',
             'email': 'Correo electrónico',
@@ -25,16 +23,10 @@ class UsuarioRegistroForm(UserCreationForm):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Otra forma de eliminar los textos de ayuda es sobreescribiéndolos en el constructor
         self.fields['username'].help_text = ''
         self.fields['password1'].help_text = ''
         self.fields['password2'].help_text = ''
         
-        # También puedes personalizar los errores
-        self.fields['username'].error_messages = {'required': 'Por favor introduce un nombre de usuario'}
-        self.fields['email'].error_messages = {'required': 'Por favor introduce un email válido'}
-        
-        # Personalizar atributos de los campos, como clases CSS
         self.fields['username'].widget.attrs.update({'class': 'form-control'})
         self.fields['email'].widget.attrs.update({'class': 'form-control'})
         self.fields['password1'].widget.attrs.update({'class': 'form-control'})
@@ -50,3 +42,6 @@ class UsuarioRegistroForm(UserCreationForm):
 class UsuarioLoginForm(AuthenticationForm):
     username = forms.CharField(label="Nombre de usuario o Email")
     password = forms.CharField(widget=forms.PasswordInput(), label="Contraseña")
+
+    username.widget.attrs.update({'class': 'form-control'})
+    password.widget.attrs.update({'class': 'form-control'})
